@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"sync"
 	"time"
 )
 
@@ -13,6 +14,14 @@ const maxOutputSize = 10 * 1024 * 1024 // 10MB — matches local bash tool
 type BashParams struct {
 	Command string `json:"command"`
 	Timeout int    `json:"timeout,omitempty"` // milliseconds
+}
+
+// readCapped reads up to limit bytes, then drains the rest to io.Discard
+// so the child process doesn't block on a full pipe buffer.
+func readCapped(r io.Reader, limit int64) []byte {
+	data, _ := io.ReadAll(io.LimitReader(r, limit))
+	io.Copy(io.Discard, r)
+	return data
 }
 
 func Bash(p *BashParams) (*Result, error) {
@@ -26,7 +35,6 @@ func Bash(p *BashParams) (*Result, error) {
 
 	cmd := exec.CommandContext(ctx, "/bin/bash", "-c", p.Command)
 
-	// Cap output to maxOutputSize using LimitedReader on pipes
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
 		return &Result{Content: "Error: " + err.Error(), IsError: true}, nil
@@ -40,8 +48,19 @@ func Bash(p *BashParams) (*Result, error) {
 		return &Result{Content: "Error: " + err.Error(), IsError: true}, nil
 	}
 
-	stdoutBytes, _ := io.ReadAll(io.LimitReader(stdoutPipe, maxOutputSize))
-	stderrBytes, _ := io.ReadAll(io.LimitReader(stderrPipe, maxOutputSize))
+	// Read both pipes concurrently to avoid deadlock when one fills up
+	var stdoutBytes, stderrBytes []byte
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		stdoutBytes = readCapped(stdoutPipe, maxOutputSize)
+	}()
+	go func() {
+		defer wg.Done()
+		stderrBytes = readCapped(stderrPipe, maxOutputSize)
+	}()
+	wg.Wait()
 
 	runErr := cmd.Wait()
 
@@ -53,7 +72,7 @@ func Bash(p *BashParams) (*Result, error) {
 		output += string(stderrBytes)
 	}
 
-	truncated := len(stdoutBytes) >= maxOutputSize || len(stderrBytes) >= maxOutputSize
+	truncated := len(stdoutBytes) >= int(maxOutputSize) || len(stderrBytes) >= int(maxOutputSize)
 	if truncated {
 		output += fmt.Sprintf("\n\n(output truncated at %d bytes)", maxOutputSize)
 	}
