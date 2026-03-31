@@ -3,12 +3,14 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 
-const MCP_CONFIG = {
-  claw: {
-    command: "npx",
-    args: ["-y", "@z-zawhtet-a/claw", "serve"],
-  },
-};
+function getMcpConfig(): { command: string; args: string[] } {
+  // process.argv[1] is the currently running claw CLI script (dist/bin/claw.js)
+  const clawBin = path.resolve(process.argv[1]);
+  return {
+    command: "node",
+    args: [clawBin, "serve"],
+  };
+}
 
 export function registerInstall(program: Command): void {
   program
@@ -45,7 +47,7 @@ function installClaudeCode(): void {
     settings.mcpServers = {};
   }
 
-  settings.mcpServers.claw = MCP_CONFIG.claw;
+  settings.mcpServers.claw = getMcpConfig();
 
   fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf-8");
@@ -68,7 +70,7 @@ function installCursor(): void {
     config.mcpServers = {};
   }
 
-  config.mcpServers.claw = MCP_CONFIG.claw;
+  config.mcpServers.claw = getMcpConfig();
 
   fs.mkdirSync(path.dirname(configPath), { recursive: true });
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n", "utf-8");
