@@ -10,6 +10,7 @@ export interface GrepParams {
 }
 
 const MAX_RESULTS = 1000;
+const MAX_FILE_SIZE = 1024 * 1024; // 1MB — skip large files (matches Go behavior)
 
 export async function grep(params: GrepParams): Promise<ToolResult> {
   try {
@@ -38,6 +39,9 @@ export async function grep(params: GrepParams): Promise<ToolResult> {
       if (matches.length >= MAX_RESULTS) break;
 
       try {
+        const stat = await fs.stat(file);
+        if (stat.size > MAX_FILE_SIZE) continue;
+
         const content = await fs.readFile(file, "utf-8");
         const lines = content.split("\n");
 

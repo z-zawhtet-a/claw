@@ -26,6 +26,16 @@ export async function edit(params: EditParams): Promise<ToolResult> {
     }
 
     const newContent = content.replace(params.old_string, params.new_string);
+
+    // Re-read to detect concurrent modification before writing
+    const currentContent = await fs.readFile(params.path, "utf-8");
+    if (currentContent !== content) {
+      return {
+        content: `Error: ${params.path} was modified by another process during edit. Please retry.`,
+        isError: true,
+      };
+    }
+
     await fs.writeFile(params.path, newContent, "utf-8");
 
     return { content: `Successfully edited ${params.path}` };

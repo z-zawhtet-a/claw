@@ -10,6 +10,6 @@ export default defineConfig({
   sourcemap: true,
   dts: true,
   banner: {
-    js: "// @opsyhq/claw - MCP server for remote machine access",
+    js: "// @z-zawhtet-a/claw - MCP server for remote machine access",
   },
 });

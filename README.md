@@ -8,9 +8,9 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@opsyhq/claw"><img src="https://img.shields.io/npm/v/@opsyhq/claw" alt="npm version"></a>
-  <a href="https://github.com/opsyhq/claw/blob/main/LICENSE"><img src="https://img.shields.io/github/license/opsyhq/claw" alt="license"></a>
-  <a href="https://github.com/opsyhq/claw/actions/workflows/release.yml"><img src="https://github.com/opsyhq/claw/actions/workflows/release.yml/badge.svg" alt="build"></a>
+  <a href="https://www.npmjs.com/package/@z-zawhtet-a/claw"><img src="https://img.shields.io/npm/v/@z-zawhtet-a/claw" alt="npm version"></a>
+  <a href="https://github.com/z-zawhtet-a/claw/blob/main/LICENSE"><img src="https://img.shields.io/github/license/z-zawhtet-a/claw" alt="license"></a>
+  <a href="https://github.com/z-zawhtet-a/claw/actions/workflows/release.yml"><img src="https://github.com/z-zawhtet-a/claw/actions/workflows/release.yml/badge.svg" alt="build"></a>
 </p>
 
 <p align="center">
@@ -47,9 +47,9 @@ Done. Across machines. Autonomously.
 ### 1. Install
 
 ```bash
-npx -y @opsyhq/claw serve
+npx -y @z-zawhtet-a/claw serve
 # or install globally
-npm install -g @opsyhq/claw
+npm install -g @z-zawhtet-a/claw
 ```
 
 ### 2. Connect to your agent
@@ -58,12 +58,12 @@ npm install -g @opsyhq/claw
 <summary><strong>Claude Code</strong></summary>
 
 ```bash
-claude mcp add claw -- npx -y @opsyhq/claw serve
+claude mcp add claw -- npx -y @z-zawhtet-a/claw serve
 ```
 
 Or run the installer:
 ```bash
-npx -y @opsyhq/claw install claude-code
+npx -y @z-zawhtet-a/claw install claude-code
 ```
 </details>
 
@@ -76,7 +76,7 @@ Add to `.cursor/mcp.json`:
   "mcpServers": {
     "claw": {
       "command": "npx",
-      "args": ["-y", "@opsyhq/claw", "serve"]
+      "args": ["-y", "@z-zawhtet-a/claw", "serve"]
     }
   }
 }
@@ -92,7 +92,7 @@ Add to `claude_desktop_config.json`:
   "mcpServers": {
     "claw": {
       "command": "npx",
-      "args": ["-y", "@opsyhq/claw", "serve"]
+      "args": ["-y", "@z-zawhtet-a/claw", "serve"]
     }
   }
 }
@@ -103,7 +103,7 @@ Add to `claude_desktop_config.json`:
 <summary><strong>Any MCP client</strong></summary>
 
 ```bash
-npx -y @opsyhq/claw serve
+npx -y @z-zawhtet-a/claw serve
 # Speaks MCP over stdio
 ```
 </details>

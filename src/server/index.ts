@@ -7,6 +7,7 @@ import { parseCommand } from "./parser.js";
 import { getHelp } from "./help.js";
 import { appendMachine, removeMachine } from "../config/loader.js";
 import { auditLog } from "../logging/audit.js";
+import { VERSION } from "../version.js";
 
 // ── Structured response ───────────────────────────────────────────────
 
@@ -169,7 +170,7 @@ export function createServer(
   const router = new Router(machines, sshTransportFactory);
 
   const server = new McpServer(
-    { name: "claw", version: "0.1.7" },
+    { name: "claw", version: VERSION },
     { instructions: SERVER_INSTRUCTIONS },
   );
 
@@ -193,7 +194,12 @@ export function createServer(
         ),
     },
     async ({ command: raw, stdin }) => {
-      const parsed = parseCommand(raw);
+      let parsed: ReturnType<typeof parseCommand>;
+      try {
+        parsed = parseCommand(raw);
+      } catch (err: any) {
+        return fail(raw, err.message, 'claw("--help")');
+      }
 
       // Help
       if (parsed.help || !parsed.command) {
@@ -431,7 +437,7 @@ async function handleMachines(
           'claw("machines remove --help")',
         );
       }
-      const removed = router.removeMachine(name);
+      const removed = await router.removeMachine(name);
       if (!removed) {
         return fail(
           `machines remove name=${name}`,

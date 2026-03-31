@@ -3,7 +3,7 @@ package rpc
 import (
 	"encoding/json"
 
-	"github.com/opsyhq/claw/pincer/tools"
+	"github.com/z-zawhtet-a/claw/pincer/tools"
 )
 
 type Request struct {

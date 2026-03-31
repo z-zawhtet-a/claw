@@ -1,5 +1,5 @@
 {
-  "name": "@opsyhq/claw",
+  "name": "@z-zawhtet-a/claw",
   "version": "0.1.7",
   "description": "MCP server that lets AI agents work across remote machines over SSH",
   "type": "module",
@@ -36,7 +36,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/opsyhq/claw"
+    "url": "https://github.com/z-zawhtet-a/claw"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",

@@ -10,6 +10,8 @@ interface PendingRequest {
   reject: (error: Error) => void;
 }
 
+const MAX_BUFFER_SIZE = 50 * 1024 * 1024; // 50MB
+
 export class SSHTransport implements Transport {
   private machine: Machine;
   private pincerPath: string | null = null;
@@ -43,6 +45,18 @@ export class SSHTransport implements Transport {
 
     this.channel.on("data", (data: Buffer) => {
       this.buffer += data.toString();
+      if (this.buffer.length > MAX_BUFFER_SIZE) {
+        this.channel?.end();
+        const err = new Error(
+          `Buffer overflow (>${MAX_BUFFER_SIZE} bytes) from "${this.machine.name}" — pincer may be sending malformed output`,
+        );
+        for (const [, req] of this.pending) {
+          req.reject(err);
+        }
+        this.pending.clear();
+        this.buffer = "";
+        return;
+      }
       this.processBuffer();
     });
 

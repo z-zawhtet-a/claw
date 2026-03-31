@@ -1,10 +1,13 @@
 package tools
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 )
+
+const maxGlobResults = 10000
 
 type GlobParams struct {
 	Pattern string `json:"pattern"`
@@ -25,7 +28,16 @@ func Glob(p *GlobParams) (*Result, error) {
 		return &Result{Content: "No files matched the pattern."}, nil
 	}
 
-	return &Result{Content: strings.Join(matches, "\n")}, nil
+	truncated := len(matches) > maxGlobResults
+	if truncated {
+		matches = matches[:maxGlobResults]
+	}
+	output := strings.Join(matches, "\n")
+	if truncated {
+		output += fmt.Sprintf("\n\n(results truncated at %d matches — use a more specific pattern)", maxGlobResults)
+	}
+
+	return &Result{Content: output}, nil
 }
 
 func globDoublestar(pattern string) (*Result, error) {
@@ -43,10 +55,15 @@ func globDoublestar(pattern string) (*Result, error) {
 	}
 
 	var matches []string
+	truncated := false
 
 	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
+		}
+		if len(matches) >= maxGlobResults {
+			truncated = true
+			return filepath.SkipAll
 		}
 
 		base := filepath.Base(path)
@@ -71,5 +88,10 @@ func globDoublestar(pattern string) (*Result, error) {
 		return &Result{Content: "No files matched the pattern."}, nil
 	}
 
-	return &Result{Content: strings.Join(matches, "\n")}, nil
+	output := strings.Join(matches, "\n")
+	if truncated {
+		output += fmt.Sprintf("\n\n(results truncated at %d matches — use a more specific pattern)", maxGlobResults)
+	}
+
+	return &Result{Content: output}, nil
 }

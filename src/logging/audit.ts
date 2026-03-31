@@ -45,10 +45,16 @@ export function auditLog(
   }
 }
 
-export function closeAuditLog(): void {
-  if (logStream) {
-    logStream.end();
-    logStream = null;
-    currentDate = null;
-  }
+export function closeAuditLog(): Promise<void> {
+  return new Promise((resolve) => {
+    if (logStream) {
+      logStream.end(() => {
+        logStream = null;
+        currentDate = null;
+        resolve();
+      });
+    } else {
+      resolve();
+    }
+  });
 }

@@ -56,6 +56,12 @@ export function parseSSHConfig(): Machine[] {
           case "identityfile":
             machine.identityFile = value.replace(/^~/, os.homedir());
             break;
+          case "proxyjump":
+            machine.proxyJump = value;
+            break;
+          case "proxycommand":
+            machine.proxyCommand = value;
+            break;
         }
       }
     }

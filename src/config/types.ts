@@ -5,6 +5,8 @@ export interface Machine {
   user?: string;
   port?: number;
   identityFile?: string;
+  proxyJump?: string;
+  proxyCommand?: string;
 }
 
 export interface Config {

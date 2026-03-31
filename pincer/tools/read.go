@@ -12,7 +12,20 @@ type ReadParams struct {
 	Limit  *int   `json:"limit,omitempty"`
 }
 
+const maxFileSize = 100 * 1024 * 1024 // 100MB
+
 func Read(p *ReadParams) (*Result, error) {
+	info, err := os.Stat(p.Path)
+	if err != nil {
+		return &Result{Content: "Error reading file: " + err.Error(), IsError: true}, nil
+	}
+	if info.Size() > maxFileSize {
+		return &Result{
+			Content: fmt.Sprintf("Error: file is %dMB, exceeds %dMB limit. Use bash with head/tail/sed to read portions.", info.Size()/1024/1024, maxFileSize/1024/1024),
+			IsError: true,
+		}, nil
+	}
+
 	data, err := os.ReadFile(p.Path)
 	if err != nil {
 		return &Result{Content: "Error reading file: " + err.Error(), IsError: true}, nil
@@ -24,18 +37,24 @@ func Read(p *ReadParams) (*Result, error) {
 	if p.Offset != nil {
 		offset = *p.Offset
 	}
+	if offset < 0 {
+		offset = 0
+	}
+	if offset > len(lines) {
+		offset = len(lines)
+	}
 
-	limit := len(lines)
+	limit := len(lines) - offset
 	if p.Limit != nil {
 		limit = *p.Limit
+	}
+	if limit < 0 {
+		limit = 0
 	}
 
 	end := offset + limit
 	if end > len(lines) {
 		end = len(lines)
-	}
-	if offset > len(lines) {
-		offset = len(lines)
 	}
 
 	sliced := lines[offset:end]

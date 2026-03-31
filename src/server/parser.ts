@@ -61,6 +61,10 @@ function tokenize(input: string): string[] {
     }
   }
 
+  if (quote !== null) {
+    throw new Error(`Unclosed ${quote === '"' ? "double" : "single"} quote in command`);
+  }
+
   if (current) tokens.push(current);
   return tokens;
 }

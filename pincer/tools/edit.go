@@ -36,6 +36,19 @@ func Edit(p *EditParams) (*Result, error) {
 	}
 
 	newContent := strings.Replace(content, p.OldString, p.NewString, 1)
+
+	// Re-read to detect concurrent modification before writing
+	currentData, err := os.ReadFile(p.Path)
+	if err != nil {
+		return &Result{Content: "Error re-reading file: " + err.Error(), IsError: true}, nil
+	}
+	if string(currentData) != content {
+		return &Result{
+			Content: fmt.Sprintf("Error: %s was modified by another process during edit. Please retry.", p.Path),
+			IsError: true,
+		}, nil
+	}
+
 	if err := os.WriteFile(p.Path, []byte(newContent), 0644); err != nil {
 		return &Result{Content: "Error writing file: " + err.Error(), IsError: true}, nil
 	}

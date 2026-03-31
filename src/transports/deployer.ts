@@ -1,13 +1,13 @@
 import fs from "node:fs";
+import crypto from "node:crypto";
 import path from "node:path";
 import os from "node:os";
 import { pipeline } from "node:stream/promises";
 import type { Client, SFTPWrapper } from "ssh2";
-
-const VERSION = "0.1.7";
+import { VERSION } from "../version.js";
 const REMOTE_DIR = ".claw";
 const REMOTE_BINARY_REL = `${REMOTE_DIR}/pincer`;
-const RELEASE_URL_BASE = "https://github.com/opsyhq/claw/releases/download";
+const RELEASE_URL_BASE = "https://github.com/z-zawhtet-a/claw/releases/download";
 const CACHE_DIR = path.join(os.homedir(), ".config", "claw", "bin");
 
 function getArchName(unameMArch: string): string {
@@ -25,6 +25,34 @@ function getCachedPath(goArch: string): string {
 
 function getDownloadUrl(goArch: string): string {
   return `${RELEASE_URL_BASE}/v${VERSION}/pincer-linux-${goArch}`;
+}
+
+function getChecksumUrl(): string {
+  return `${RELEASE_URL_BASE}/v${VERSION}/checksums.txt`;
+}
+
+async function fetchExpectedChecksum(goArch: string): Promise<string | null> {
+  try {
+    const res = await fetch(getChecksumUrl(), { redirect: "follow" });
+    if (!res.ok) return null;
+    const text = await res.text();
+    const binaryName = `pincer-linux-${goArch}`;
+    for (const line of text.split("\n")) {
+      // Format: "<sha256>  <filename>" or "<sha256> <filename>"
+      const parts = line.trim().split(/\s+/);
+      if (parts.length === 2 && parts[1] === binaryName) {
+        return parts[0];
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function computeFileHash(filePath: string): string {
+  const data = fs.readFileSync(filePath);
+  return crypto.createHash("sha256").update(data).digest("hex");
 }
 
 function getLocalDevPath(goArch: string): string | null {
@@ -64,6 +92,19 @@ async function downloadPincer(goArch: string): Promise<string> {
   const tmpPath = `${cached}.tmp`;
   const fileStream = fs.createWriteStream(tmpPath);
   await pipeline(res.body as any, fileStream);
+
+  // Verify integrity if checksums are available
+  const expectedHash = await fetchExpectedChecksum(goArch);
+  if (expectedHash) {
+    const actualHash = computeFileHash(tmpPath);
+    if (actualHash !== expectedHash) {
+      fs.unlinkSync(tmpPath);
+      throw new Error(
+        `Pincer binary integrity check failed.\nExpected: ${expectedHash}\nActual:   ${actualHash}\nThe downloaded binary may be corrupted or tampered with.`,
+      );
+    }
+  }
+
   fs.chmodSync(tmpPath, 0o755);
   fs.renameSync(tmpPath, cached);
 
@@ -79,10 +120,24 @@ async function resolvePincerBinary(goArch: string): Promise<string> {
   return downloadPincer(goArch);
 }
 
+const EXEC_TIMEOUT = 30_000; // 30 seconds
+
 async function execCommand(conn: Client, command: string): Promise<string> {
   return new Promise((resolve, reject) => {
+    let settled = false;
+
     conn.exec(command, (err, stream) => {
       if (err) return reject(err);
+
+      const timer = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          stream.destroy();
+          reject(
+            new Error(`Command timed out after ${EXEC_TIMEOUT}ms: ${command}`),
+          );
+        }
+      }, EXEC_TIMEOUT);
 
       let output = "";
       let stderr = "";
@@ -93,6 +148,9 @@ async function execCommand(conn: Client, command: string): Promise<string> {
         stderr += data.toString();
       });
       stream.on("close", (code: number) => {
+        clearTimeout(timer);
+        if (settled) return;
+        settled = true;
         if (code !== 0 && !output.trim()) {
           reject(new Error(`Command failed (exit ${code}): ${stderr.trim()}`));
         } else {
@@ -151,14 +209,16 @@ export async function ensurePincer(conn: Client): Promise<string> {
   // Upload binary via SFTP
   const sftp = await getSftp(conn);
 
-  await new Promise<void>((resolve, reject) => {
-    sftp.fastPut(localPath, remoteBinaryPath, (err) => {
-      if (err) reject(new Error(`SFTP upload failed: ${err.message}`));
-      else resolve();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      sftp.fastPut(localPath, remoteBinaryPath, (err) => {
+        if (err) reject(new Error(`SFTP upload failed: ${err.message}`));
+        else resolve();
+      });
     });
-  });
-
-  sftp.end();
+  } finally {
+    sftp.end();
+  }
 
   // Make executable
   await execCommand(conn, `chmod +x ${remoteBinaryPath}`);

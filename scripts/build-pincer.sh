@@ -6,13 +6,17 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 PINCER_DIR="$PROJECT_DIR/pincer"
 OUT_DIR="$PROJECT_DIR/pincer-bin"
 
+# Read version from package.json
+VERSION=$(node -e "console.log(require('./package.json').version)" 2>/dev/null || echo "0.0.0")
+LDFLAGS="-s -w -X main.Version=${VERSION}"
+
 mkdir -p "$OUT_DIR"
 
-echo "Building pincer for linux/amd64..."
-GOOS=linux GOARCH=amd64 go build -C "$PINCER_DIR" -ldflags="-s -w" -o "$OUT_DIR/pincer-linux-amd64" .
+echo "Building pincer v${VERSION} for linux/amd64..."
+GOOS=linux GOARCH=amd64 go build -C "$PINCER_DIR" -ldflags="$LDFLAGS" -o "$OUT_DIR/pincer-linux-amd64" .
 
-echo "Building pincer for linux/arm64..."
-GOOS=linux GOARCH=arm64 go build -C "$PINCER_DIR" -ldflags="-s -w" -o "$OUT_DIR/pincer-linux-arm64" .
+echo "Building pincer v${VERSION} for linux/arm64..."
+GOOS=linux GOARCH=arm64 go build -C "$PINCER_DIR" -ldflags="$LDFLAGS" -o "$OUT_DIR/pincer-linux-arm64" .
 
 echo "Done. Binaries in $OUT_DIR:"
 ls -lh "$OUT_DIR"/pincer-*

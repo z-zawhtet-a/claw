@@ -23,7 +23,7 @@ export function registerServe(program: Command): void {
 
       const shutdown = async () => {
         await router.disconnectAll();
-        closeAuditLog();
+        await closeAuditLog();
         process.exit(0);
       };
 

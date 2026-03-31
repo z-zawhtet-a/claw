@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import type { ToolResult } from "./bash.js";
 
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+
 export interface ReadParams {
   path: string;
   offset?: number;
@@ -9,6 +11,14 @@ export interface ReadParams {
 
 export async function read(params: ReadParams): Promise<ToolResult> {
   try {
+    const stat = await fs.stat(params.path);
+    if (stat.size > MAX_FILE_SIZE) {
+      return {
+        content: `Error: file is ${Math.round(stat.size / 1024 / 1024)}MB, exceeds ${MAX_FILE_SIZE / 1024 / 1024}MB limit. Use bash with head/tail/sed to read portions.`,
+        isError: true,
+      };
+    }
+
     const content = await fs.readFile(params.path, "utf-8");
     const lines = content.split("\n");
 
