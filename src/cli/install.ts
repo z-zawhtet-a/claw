@@ -34,25 +34,27 @@ export function registerInstall(program: Command): void {
 }
 
 function installClaudeCode(): void {
-  const settingsPath = path.join(os.homedir(), ".claude", "settings.json");
+  const configPath = path.join(os.homedir(), ".claude.json");
 
-  let settings: any = {};
+  let config: any = {};
   try {
-    settings = JSON.parse(fs.readFileSync(settingsPath, "utf-8"));
+    config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
   } catch {
     // File doesn't exist or is invalid, start fresh
   }
 
-  if (!settings.mcpServers) {
-    settings.mcpServers = {};
+  if (!config.mcpServers) {
+    config.mcpServers = {};
   }
 
-  settings.mcpServers.claw = getMcpConfig();
+  config.mcpServers.claw = {
+    type: "stdio",
+    ...getMcpConfig(),
+  };
 
-  fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
-  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf-8");
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n", "utf-8");
 
-  console.log(`Installed Claw MCP server into ${settingsPath}`);
+  console.log(`Installed Claw MCP server into ${configPath}`);
   console.log("Restart Claude Code to pick up the changes.");
 }
 
