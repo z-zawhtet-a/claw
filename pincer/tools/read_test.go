@@ -4,6 +4,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -32,5 +33,8 @@ func TestReadRejectsNonRegularFile(t *testing.T) {
 	}
 	if !res.IsError {
 		t.Fatalf("expected error for non-regular file, got: %s", res.Content)
+	}
+	if !strings.Contains(res.Content, "not a regular file") {
+		t.Fatalf("expected the IsRegular guard message, got: %s", res.Content)
 	}
 }
