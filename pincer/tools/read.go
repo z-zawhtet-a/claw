@@ -19,6 +19,9 @@ func Read(p *ReadParams) (*Result, error) {
 	if err != nil {
 		return &Result{Content: "Error reading file: " + err.Error(), IsError: true}, nil
 	}
+	if !info.Mode().IsRegular() {
+		return &Result{Content: "Error: " + p.Path + " is not a regular file", IsError: true}, nil
+	}
 	if info.Size() > maxFileSize {
 		return &Result{
 			Content: fmt.Sprintf("Error: file is %dMB, exceeds %dMB limit. Use bash with head/tail/sed to read portions.", info.Size()/1024/1024, maxFileSize/1024/1024),
@@ -53,7 +56,7 @@ func Read(p *ReadParams) (*Result, error) {
 	}
 
 	end := offset + limit
-	if end > len(lines) {
+	if end < offset || end > len(lines) { // end < offset catches integer overflow
 		end = len(lines)
 	}
 
