@@ -55,17 +55,22 @@ function computeFileHash(filePath: string): string {
   return crypto.createHash("sha256").update(data).digest("hex");
 }
 
-function getLocalDevPath(goArch: string): string | null {
-  // Check for locally-built binary (development use)
-  const candidates = [
-    path.join(process.cwd(), "pincer-bin", `pincer-linux-${goArch}`),
-  ];
+export function getLocalDevPath(goArch: string): string | null {
+  const binName = `pincer-linux-${goArch}`;
+  const candidates: string[] = [];
 
-  // Walk up from this file's location
+  // Trust only a binary bundled inside claw's own package tree — resolve
+  // relative to THIS module and walk up to the package root. Never scan the
+  // current working directory (an untrusted repo could plant a binary there).
   let dir = path.dirname(new URL(import.meta.url).pathname);
-  for (let i = 0; i < 5; i++) {
-    candidates.push(path.join(dir, "pincer-bin", `pincer-linux-${goArch}`));
+  for (let i = 0; i < 4; i++) {
+    candidates.push(path.join(dir, "pincer-bin", binName));
     dir = path.dirname(dir);
+  }
+
+  // Explicit dev mode additionally trusts a locally-built binary in the CWD.
+  if (process.env.CLAW_DEV) {
+    candidates.unshift(path.join(process.cwd(), "pincer-bin", binName));
   }
 
   for (const p of candidates) {
@@ -93,16 +98,21 @@ async function downloadPincer(goArch: string): Promise<string> {
   const fileStream = fs.createWriteStream(tmpPath);
   await pipeline(res.body as any, fileStream);
 
-  // Verify integrity if checksums are available
+  // Verify integrity — fail closed if we cannot obtain a checksum.
   const expectedHash = await fetchExpectedChecksum(goArch);
-  if (expectedHash) {
-    const actualHash = computeFileHash(tmpPath);
-    if (actualHash !== expectedHash) {
-      fs.unlinkSync(tmpPath);
-      throw new Error(
-        `Pincer binary integrity check failed.\nExpected: ${expectedHash}\nActual:   ${actualHash}\nThe downloaded binary may be corrupted or tampered with.`,
-      );
-    }
+  if (!expectedHash) {
+    fs.unlinkSync(tmpPath);
+    throw new Error(
+      `Refusing to deploy pincer: no verified checksum available from ${getChecksumUrl()}. ` +
+        `The release must publish checksums.txt.`,
+    );
+  }
+  const actualHash = computeFileHash(tmpPath);
+  if (actualHash !== expectedHash) {
+    fs.unlinkSync(tmpPath);
+    throw new Error(
+      `Pincer binary integrity check failed.\nExpected: ${expectedHash}\nActual:   ${actualHash}\nThe downloaded binary may be corrupted or tampered with.`,
+    );
   }
 
   fs.chmodSync(tmpPath, 0o755);
@@ -206,12 +216,13 @@ export async function ensurePincer(conn: Client): Promise<string> {
   // Remove old binary (can't overwrite a running executable on Linux) and ensure directory exists
   await execCommand(conn, `mkdir -p ${remoteHome}/${REMOTE_DIR} && rm -f ${remoteBinaryPath}`);
 
-  // Upload binary via SFTP
+  // Upload to a temp path, then atomically move into place on the remote.
+  const remoteTmp = `${remoteBinaryPath}.tmp`;
   const sftp = await getSftp(conn);
 
   try {
     await new Promise<void>((resolve, reject) => {
-      sftp.fastPut(localPath, remoteBinaryPath, (err) => {
+      sftp.fastPut(localPath, remoteTmp, (err) => {
         if (err) reject(new Error(`SFTP upload failed: ${err.message}`));
         else resolve();
       });
@@ -220,8 +231,20 @@ export async function ensurePincer(conn: Client): Promise<string> {
     sftp.end();
   }
 
-  // Make executable
-  await execCommand(conn, `chmod +x ${remoteBinaryPath}`);
+  await execCommand(conn, `mv -f ${remoteTmp} ${remoteBinaryPath} && chmod +x ${remoteBinaryPath}`);
+
+  // Verify the uploaded binary matches what we sent (detect truncation/tamper).
+  const localHash = computeFileHash(localPath);
+  const remoteHashOut = await execCommand(
+    conn,
+    `sha256sum ${remoteBinaryPath} 2>/dev/null || shasum -a 256 ${remoteBinaryPath}`,
+  );
+  const remoteHash = remoteHashOut.trim().split(/\s+/)[0];
+  if (remoteHash !== localHash) {
+    throw new Error(
+      `Remote pincer hash mismatch after upload (expected ${localHash}, got ${remoteHash}).`,
+    );
+  }
 
   return remoteBinaryPath;
 }
