@@ -25,7 +25,11 @@ export async function edit(params: EditParams): Promise<ToolResult> {
       };
     }
 
-    const newContent = content.replace(params.old_string, params.new_string);
+    const idx = content.indexOf(params.old_string);
+    const newContent =
+      content.slice(0, idx) +
+      params.new_string +
+      content.slice(idx + params.old_string.length);
 
     // Re-read to detect concurrent modification before writing
     const currentContent = await fs.readFile(params.path, "utf-8");
