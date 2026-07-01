@@ -25,13 +25,20 @@ function loadJsonConfig(configPath: string): any {
     if (err.code === "ENOENT") return {};
     throw new InstallAbort(`Cannot read ${configPath}: ${err.message}`);
   }
+  let parsed: unknown;
   try {
-    return JSON.parse(raw);
+    parsed = JSON.parse(raw);
   } catch {
     throw new InstallAbort(
       `Refusing to overwrite ${configPath}: it exists but is not valid JSON. Fix or remove it first.`,
     );
   }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new InstallAbort(
+      `Refusing to overwrite ${configPath}: it is valid JSON but not an object.`,
+    );
+  }
+  return parsed;
 }
 
 function backup(configPath: string): void {

@@ -69,7 +69,7 @@ export function getLocalDevPath(goArch: string): string | null {
   }
 
   // Explicit dev mode additionally trusts a locally-built binary in the CWD.
-  if (process.env.CLAW_DEV) {
+  if (process.env.CLAW_DEV === "1") {
     candidates.unshift(path.join(process.cwd(), "pincer-bin", binName));
   }
 
@@ -231,20 +231,22 @@ export async function ensurePincer(conn: Client): Promise<string> {
     sftp.end();
   }
 
-  await execCommand(conn, `mv -f ${remoteTmp} ${remoteBinaryPath} && chmod +x ${remoteBinaryPath}`);
-
-  // Verify the uploaded binary matches what we sent (detect truncation/tamper).
+  // Verify the uploaded temp file BEFORE promoting it to the live path, so a
+  // corrupted/tampered upload never lands at the executable path even briefly.
   const localHash = computeFileHash(localPath);
   const remoteHashOut = await execCommand(
     conn,
-    `sha256sum ${remoteBinaryPath} 2>/dev/null || shasum -a 256 ${remoteBinaryPath}`,
+    `sha256sum ${remoteTmp} 2>/dev/null || shasum -a 256 ${remoteTmp}`,
   );
   const remoteHash = remoteHashOut.trim().split(/\s+/)[0];
   if (remoteHash !== localHash) {
+    await execCommand(conn, `rm -f ${remoteTmp}`).catch(() => {});
     throw new Error(
       `Remote pincer hash mismatch after upload (expected ${localHash}, got ${remoteHash}).`,
     );
   }
+  // Atomically promote into place and make executable.
+  await execCommand(conn, `mv -f ${remoteTmp} ${remoteBinaryPath} && chmod +x ${remoteBinaryPath}`);
 
   return remoteBinaryPath;
 }

@@ -157,7 +157,7 @@ function createHostVerifier(
 
     // result === "unknown"
     const fingerprint = crypto.createHash("sha256").update(key).digest("base64");
-    if (process.env.CLAW_STRICT_HOST_KEY) {
+    if (process.env.CLAW_STRICT_HOST_KEY === "1") {
       process.stderr.write(
         `ERROR: host "${host}:${port}" is not in ${khPath} and CLAW_STRICT_HOST_KEY is set ` +
           `(fingerprint SHA256:${fingerprint}). Refusing to connect.\n`,

@@ -28,8 +28,8 @@ export async function read(params: ReadParams): Promise<ToolResult> {
     const content = await fs.readFile(params.path, "utf-8");
     const lines = content.split("\n");
 
-    const offset = params.offset ?? 0;
-    const limit = params.limit ?? lines.length;
+    const offset = Math.min(Math.max(0, params.offset ?? 0), lines.length);
+    const limit = Math.max(0, params.limit ?? lines.length);
     const sliced = lines.slice(offset, offset + limit);
 
     // Format with line numbers (1-indexed)
