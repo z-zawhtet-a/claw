@@ -43,7 +43,9 @@ func main() {
 		wg.Add(1)
 		go func(r rpc.Request) {
 			defer wg.Done()
-			resp := rpc.Dispatch(&r)
+			resp := rpc.RecoverToResponse(r.ID, func() *rpc.Response {
+				return rpc.Dispatch(&r)
+			})
 			writeResponse(resp)
 		}(req)
 	}

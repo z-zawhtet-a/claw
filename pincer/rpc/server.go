@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/z-zawhtet-a/claw/pincer/tools"
 )
@@ -25,6 +26,18 @@ func ErrorResponse(id int, msg string) *Response {
 		ID:      id,
 		IsError: true,
 	}
+}
+
+// RecoverToResponse runs fn and converts any panic into an error Response for
+// id, so one bad request can never crash the server or drop other in-flight
+// requests sharing the process.
+func RecoverToResponse(id int, fn func() *Response) (resp *Response) {
+	defer func() {
+		if r := recover(); r != nil {
+			resp = ErrorResponse(id, fmt.Sprintf("internal error: %v", r))
+		}
+	}()
+	return fn()
 }
 
 func Dispatch(req *Request) *Response {
