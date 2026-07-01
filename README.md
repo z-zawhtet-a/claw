@@ -230,6 +230,13 @@ Commit this to your repo. Your whole team gets the same machine setup, each usin
 - **Audit log** — Every tool call is logged to `~/.config/claw/logs/`.
 - **Want guardrails?** — For approval workflows and policy enforcement on remote operations, check out [Opsy](https://opsy.sh).
 
+### Security notes
+
+- **Host-key verification** is accept-new / TOFU (trust-on-first-use): the first time you connect to a host, its key is pinned to `~/.ssh/known_hosts`; a changed or revoked key on a later connection is rejected. Set `CLAW_STRICT_HOST_KEY=1` to reject unknown hosts outright instead of pinning them.
+- **Limitation** — hosts covered only by a wildcard (`*.example.com`) or `@cert-authority` entry in `known_hosts` are treated as unknown (and pinned by default), since those forms aren't validated. Use `CLAW_STRICT_HOST_KEY=1` if you rely on wildcard or CA entries.
+- **`CLAW_DEV=1`** lets Claw use a locally-built `pincer-bin/` binary from the current working directory. Off by default — production always uses the checksum-verified download from GitHub Releases.
+- Remote deploy verifies the uploaded binary's checksum before promoting it into place, which requires `sha256sum` or `shasum` on the remote host.
+
 ## CLI Reference
 
 ```bash

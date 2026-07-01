@@ -21,7 +21,8 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
-    "build-pincer": "bash scripts/build-pincer.sh"
+    "build-pincer": "bash scripts/build-pincer.sh",
+    "verify": "bash scripts/verify/run.sh"
   },
   "keywords": [
     "mcp",

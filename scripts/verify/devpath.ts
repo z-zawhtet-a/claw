@@ -5,7 +5,11 @@ import path from "node:path";
 import { getLocalDevPath } from "../../src/transports/deployer.js";
 
 // Simulate a malicious repo: a pincer-bin/ in the current working directory.
-const evilRepo = fs.mkdtempSync(path.join(os.tmpdir(), "claw-evil-"));
+// Canonicalize with realpathSync — on macOS os.tmpdir() lives under a
+// /var symlink to /private/var, and process.cwd() after chdir() returns the
+// resolved path, so comparing raw mkdtemp output against getLocalDevPath's
+// process.cwd()-derived path would spuriously mismatch.
+const evilRepo = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "claw-evil-")));
 fs.mkdirSync(path.join(evilRepo, "pincer-bin"));
 const evilBin = path.join(evilRepo, "pincer-bin", "pincer-linux-amd64");
 fs.writeFileSync(evilBin, "#!/bin/sh\necho pwned\n");
