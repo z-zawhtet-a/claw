@@ -8,7 +8,6 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@z-zawhtet-a/claw"><img src="https://img.shields.io/npm/v/@z-zawhtet-a/claw" alt="npm version"></a>
   <a href="https://github.com/z-zawhtet-a/claw/blob/main/LICENSE"><img src="https://img.shields.io/github/license/z-zawhtet-a/claw" alt="license"></a>
   <a href="https://github.com/z-zawhtet-a/claw/actions/workflows/release.yml"><img src="https://github.com/z-zawhtet-a/claw/actions/workflows/release.yml/badge.svg" alt="build"></a>
 </p>
@@ -46,53 +45,62 @@ Done. Across machines. Autonomously.
 
 ### 1. Install
 
+One line, any Mac — builds from source and wires up Claude Code for you:
+
 ```bash
-npx -y @z-zawhtet-a/claw serve
-# or install globally
-npm install -g @z-zawhtet-a/claw
+curl -fsSL https://raw.githubusercontent.com/z-zawhtet-a/claw/main/install.sh | bash
 ```
+
+Requires Node 20+ (the script tells you how to get it if it's missing). Prefer to
+read before piping to a shell?
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/z-zawhtet-a/claw/main/install.sh -o install.sh
+less install.sh && bash install.sh
+```
+
+**Offline / air-gapped Mac?** Copy the repo folder over (AirDrop, USB, `scp`) and run
+the same script from inside it — it installs from the local source, no download:
+
+```bash
+cd claw && ./install.sh
+```
+
+Options: `--no-configure` skips agent wiring; `CLAW_REF=<tag>` pins a version;
+`CLAW_SRC=<path>` forces a local source dir.
 
 ### 2. Connect to your agent
 
 <details open>
 <summary><strong>Claude Code</strong></summary>
 
-```bash
-claude mcp add claw -- npx -y @z-zawhtet-a/claw serve
-```
+Already done — the one-liner above ran `claw install claude-code` for you. Just
+restart Claude Code. To (re)wire it manually:
 
-Or run the installer:
 ```bash
-npx -y @z-zawhtet-a/claw install claude-code
+claw install claude-code
 ```
 </details>
 
 <details>
 <summary><strong>Cursor</strong></summary>
 
-Add to `.cursor/mcp.json`:
-```json
-{
-  "mcpServers": {
-    "claw": {
-      "command": "npx",
-      "args": ["-y", "@z-zawhtet-a/claw", "serve"]
-    }
-  }
-}
+```bash
+claw install cursor   # writes .cursor/mcp.json with an absolute path to claw
 ```
 </details>
 
 <details>
 <summary><strong>Claude Desktop</strong></summary>
 
-Add to `claude_desktop_config.json`:
+Add to `claude_desktop_config.json`. GUI apps don't inherit your shell PATH, so
+use the absolute path from `which claw`:
 ```json
 {
   "mcpServers": {
     "claw": {
-      "command": "npx",
-      "args": ["-y", "@z-zawhtet-a/claw", "serve"]
+      "command": "/absolute/path/to/claw",
+      "args": ["serve"]
     }
   }
 }
@@ -103,7 +111,7 @@ Add to `claude_desktop_config.json`:
 <summary><strong>Any MCP client</strong></summary>
 
 ```bash
-npx -y @z-zawhtet-a/claw serve
+claw serve
 # Speaks MCP over stdio
 ```
 </details>

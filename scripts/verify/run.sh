@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."   # repo root
 mkdir -p dist
-scripts=(atomic-write edit-literal read-special install-safe hostkey devpath)
+scripts=(atomic-write edit-literal read-special install-safe hostkey devpath install-sh)
 fail=0
 for s in "${scripts[@]}"; do
   node_modules/.bin/esbuild "scripts/verify/$s.ts" --bundle --platform=node --format=esm --packages=external --outfile=dist/_verify.mjs >/dev/null
